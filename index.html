@@ -297,7 +297,7 @@
   /* ── SOUND BUTTONS ── */
   .sbtn {
     width: 100%;
-    height: 36px;
+    height: 47px;
     border-radius: 7px;
     border: 1px solid var(--border);
     background: var(--card);
@@ -522,44 +522,6 @@
 <!-- OVERLAY -->
 <div id="overlay" onclick="closeMenu()"></div>
 
-<!-- MOBILE UNLOCK BANNER -->
-<div id="unlockBanner" style="
-  display:none;
-  position:fixed;
-  top:56px;left:0;right:0;
-  background:#c0392b;
-  color:#fff;
-  text-align:center;
-  padding:8px 12px;
-  font-family:'Cormorant Garamond',serif;
-  font-size:13px;
-  letter-spacing:1px;
-  z-index:200;
-  cursor:pointer;
-" onclick="testAudio()">👆 Нажмите для активации звука</div>
-
-<!-- ДИАГНОСТИКА -->
-<div id="diagBox" style="
-  display:none;
-  position:fixed;
-  top:100px;left:10px;right:10px;
-  background:#000;
-  color:#0f0;
-  font-family:monospace;
-  font-size:12px;
-  padding:10px;
-  border:1px solid #0f0;
-  border-radius:8px;
-  z-index:999;
-  max-height:200px;
-  overflow-y:auto;
-  white-space:pre-wrap;
-"></div>
-
-<script>
-  // Показываем баннер на всех устройствах для диагностики
-  document.getElementById('unlockBanner').style.display = 'block';
-</script>
 
 <!-- HEADER -->
 <div id="header">
@@ -637,34 +599,6 @@
 </div>
 
 <script>
-// ── ДИАГНОСТИКА ──
-function diag(msg) {
-  const box = document.getElementById('diagBox');
-  if (box) { box.style.display = 'block'; box.textContent += msg + '\n'; }
-  console.log(msg);
-}
-
-function testAudio() {
-  diag('--- ТЕСТ ---');
-  diag('UA: ' + navigator.userAgent.substring(0,80));
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    diag('AudioContext: ' + ctx.state);
-    ctx.resume().then(() => diag('resume OK'));
-  } catch(e) { diag('AudioContext ERR: ' + e.message); }
-  try {
-    const a = new Audio('11.mp3');
-    a.volume = 1.0;
-    const p = a.play();
-    if (p) {
-      p.then(() => {
-        diag('11.mp3: ИГРАЕТ ✓');
-        document.getElementById('unlockBanner').style.display = 'none';
-      }).catch(e => diag('PLAY ERR: ' + e.name + ' ' + e.message));
-    }
-  } catch(e) { diag('Audio ERR: ' + e.message); }
-}
-
 // ── AUDIO UNLOCK ──
 let audioUnlocked = false;
 function unlockAudio() {

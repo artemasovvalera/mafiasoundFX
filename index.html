@@ -50,7 +50,7 @@
     --fx-border: #d0b8b8;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
   html, body {
     height: 100%;
@@ -532,17 +532,33 @@
   text-align:center;
   padding:8px 12px;
   font-family:'Cormorant Garamond',serif;
-  font-size:14px;
+  font-size:13px;
   letter-spacing:1px;
   z-index:200;
   cursor:pointer;
-" onclick="unlockAudio()">👆 Нажмите здесь для активации звука</div>
+" onclick="testAudio()">👆 Нажмите для активации звука</div>
+
+<!-- ДИАГНОСТИКА -->
+<div id="diagBox" style="
+  display:none;
+  position:fixed;
+  top:100px;left:10px;right:10px;
+  background:#000;
+  color:#0f0;
+  font-family:monospace;
+  font-size:12px;
+  padding:10px;
+  border:1px solid #0f0;
+  border-radius:8px;
+  z-index:999;
+  max-height:200px;
+  overflow-y:auto;
+  white-space:pre-wrap;
+"></div>
 
 <script>
-  // Show banner on mobile
-  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    document.getElementById('unlockBanner').style.display = 'block';
-  }
+  // Показываем баннер на всех устройствах для диагностики
+  document.getElementById('unlockBanner').style.display = 'block';
 </script>
 
 <!-- HEADER -->
@@ -621,33 +637,49 @@
 </div>
 
 <script>
-// ── AUDIO UNLOCK FOR MOBILE ──
-// iOS и Android требуют первого касания перед воспроизведением
-let audioUnlocked = false;
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  // Создаём и сразу останавливаем тихий звук — разблокирует аудио движок
-  const buf = new (window.AudioContext || window.webkitAudioContext)();
-  const src = buf.createOscillator();
-  src.connect(buf.destination);
-  src.start(0);
-  src.stop(0.001);
-  buf.resume().then(() => {
-    audioUnlocked = true;
-    const banner = document.getElementById('unlockBanner');
-    if (banner) banner.style.display = 'none';
-  });
-  // Также пробуем через silent Audio
-  const silent = new Audio();
-  silent.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAA' +
-    'EAAQARAAIAIgACAAgAZGF0YQQAAAAAAA==';
-  silent.play().catch(() => {});
-  audioUnlocked = true;
-  const banner = document.getElementById('unlockBanner');
-  if (banner) banner.style.display = 'none';
+// ── ДИАГНОСТИКА ──
+function diag(msg) {
+  const box = document.getElementById('diagBox');
+  if (box) { box.style.display = 'block'; box.textContent += msg + '\n'; }
+  console.log(msg);
 }
 
+function testAudio() {
+  diag('--- ТЕСТ ---');
+  diag('UA: ' + navigator.userAgent.substring(0,80));
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    diag('AudioContext: ' + ctx.state);
+    ctx.resume().then(() => diag('resume OK'));
+  } catch(e) { diag('AudioContext ERR: ' + e.message); }
+  try {
+    const a = new Audio('11.mp3');
+    a.volume = 1.0;
+    const p = a.play();
+    if (p) {
+      p.then(() => {
+        diag('11.mp3: ИГРАЕТ ✓');
+        document.getElementById('unlockBanner').style.display = 'none';
+      }).catch(e => diag('PLAY ERR: ' + e.name + ' ' + e.message));
+    }
+  } catch(e) { diag('Audio ERR: ' + e.message); }
+}
+
+// ── AUDIO UNLOCK ──
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch(e) {}
+}
 document.addEventListener('touchstart', unlockAudio, { once: true });
 document.addEventListener('click', unlockAudio, { once: true });
 
@@ -922,12 +954,17 @@ function closeMenu() {
   document.getElementById('overlay').classList.remove('open');
 }
 
-// Prevent double-tap zoom on iOS
-document.addEventListener('touchend', e => {
-  if (e.target.closest('.sbtn, .fx-btn, .hbtn, .menu-item, .cf-btn')) {
-    e.preventDefault();
-  }
-}, { passive: false });
+// ── TOUCH FIX FOR MOBILE ──
+// Убираем задержку 300ms на мобильных через touchstart→click
+function addTouchClick(el, fn) {
+  let moved = false;
+  el.addEventListener('touchstart', () => { moved = false; }, { passive: true });
+  el.addEventListener('touchmove',  () => { moved = true;  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!moved) { e.preventDefault(); fn(e); }
+  }, { passive: false });
+  el.addEventListener('click', fn);
+}
 </script>
 </body>
 </html>

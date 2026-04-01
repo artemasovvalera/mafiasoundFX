@@ -522,6 +522,29 @@
 <!-- OVERLAY -->
 <div id="overlay" onclick="closeMenu()"></div>
 
+<!-- MOBILE UNLOCK BANNER -->
+<div id="unlockBanner" style="
+  display:none;
+  position:fixed;
+  top:56px;left:0;right:0;
+  background:#c0392b;
+  color:#fff;
+  text-align:center;
+  padding:8px 12px;
+  font-family:'Cormorant Garamond',serif;
+  font-size:14px;
+  letter-spacing:1px;
+  z-index:200;
+  cursor:pointer;
+" onclick="unlockAudio()">👆 Нажмите здесь для активации звука</div>
+
+<script>
+  // Show banner on mobile
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    document.getElementById('unlockBanner').style.display = 'block';
+  }
+</script>
+
 <!-- HEADER -->
 <div id="header">
   <div id="logo">М<span>А</span>ФИЯ</div>
@@ -598,6 +621,36 @@
 </div>
 
 <script>
+// ── AUDIO UNLOCK FOR MOBILE ──
+// iOS и Android требуют первого касания перед воспроизведением
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  // Создаём и сразу останавливаем тихий звук — разблокирует аудио движок
+  const buf = new (window.AudioContext || window.webkitAudioContext)();
+  const src = buf.createOscillator();
+  src.connect(buf.destination);
+  src.start(0);
+  src.stop(0.001);
+  buf.resume().then(() => {
+    audioUnlocked = true;
+    const banner = document.getElementById('unlockBanner');
+    if (banner) banner.style.display = 'none';
+  });
+  // Также пробуем через silent Audio
+  const silent = new Audio();
+  silent.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAA' +
+    'EAAQARAAIAIgACAAgAZGF0YQQAAAAAAA==';
+  silent.play().catch(() => {});
+  audioUnlocked = true;
+  const banner = document.getElementById('unlockBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
+
 // ── STATE ──
 let currentAudio = null;
 let currentBtn   = null;
